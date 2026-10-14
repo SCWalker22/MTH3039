@@ -1,0 +1,2 @@
+display("text/markdown", Base.doc(<fn>))
+Above is the code to display docs formatted properly in a noteboook
