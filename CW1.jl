@@ -65,7 +65,7 @@ function simple_grouping(features, r)
         for (i, g) in enumerate(groups)
             # println(i)
             # println("g = $g")
-            if euclidean(g, point) < r
+            if norm(g - point) < r
                 push!(group_indeces, i)
                 set_flag = true
                 break
@@ -77,13 +77,6 @@ function simple_grouping(features, r)
         end
     end
     return group_indeces
-end
-
-function featuriser(X)
-    N, p = columns(X)
-    mean_N = mean(N)
-    sd_p = std(p)
-    return SVector(mean_N, sd_p)
 end
 
 function fg1(ds, featuriser, r, ics; Ttr, Dt, T)
@@ -98,7 +91,7 @@ function fg1(ds, featuriser, r, ics; Ttr, Dt, T)
 end
 
 function fg2(ds, featuriser, r, ics; Ttr, Dt, T)
-    featrues = []
+    features = []
     for point in ics
         u0 = collect(point)
         X, t = trajectory(ds, T, u0; Ttr, Dt)
@@ -106,11 +99,27 @@ function fg2(ds, featuriser, r, ics; Ttr, Dt, T)
         push!(features, feature)
     end
     groups = simple_grouping(features, r)
-    group_init_conds = []
-    for i in length(groups)
-        println("hi")
+    group_init_traj = []
+    boa_fractions = []
+    for i in 1:maximum(groups)
+        println("hi $i")
         index = findfirst(==(i), groups)
-        push!(group_init_conds, collect(ics[index]))
+        init_cond = collect(ics[index])
+        X, t = trajectory(ds, T, init_cond; Ttr, Dt)
+        push!(group_init_traj, X)
+        # Now calculate BoA fractions
+        num = count(isequal(i), groups)
+        frac = num/length(groups)
+        push!(boa_fractions, frac)
     end
-    return (groups, group_init_conds)
+
+    return (groups, group_init_traj, boa_fractions)
+end
+
+function duffing_oscillator(u, p, t)
+    x, v = u
+    δ, f, ω = p
+    dx = v
+    dv = x - x^3 - δ*v + f*cos(ω*t)
+    return SVector(dx, dv, t)
 end
