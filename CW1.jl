@@ -102,7 +102,6 @@ function fg2(ds, featuriser, r, ics; Ttr, Dt, T)
     group_init_traj = []
     boa_fractions = []
     for i in 1:maximum(groups)
-        println("hi $i")
         index = findfirst(==(i), groups)
         init_cond = collect(ics[index])
         X, t = trajectory(ds, T, init_cond; Ttr, Dt)
