@@ -148,3 +148,18 @@ function duffing_oscillator(u, p, t)
     dv = x - x^3 - δ*v + f*cos(ω*t)
     return SVector(dx, dv, t)
 end
+
+"""
+"""
+function pp_bmap(ds::DynamicalSystem, ics)
+pow = 4
+grid_recur = (
+range(0, 15^(1/pow); length = 100).^pow,
+range(0, (30e-3)^(1/pow); length = 100).^pow,
+)
+bmap_recur = BasinMapRecurrences(ds, grid_recur;
+consecutive_recurrences = 4000, consecutive_attractor_steps = 10,
+Δt = 0.2, stop_at_Δt = true, store_once_per_cell = false,
+)
+labels = map(bmap_recur, ics)
+end
