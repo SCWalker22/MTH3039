@@ -1,3 +1,14 @@
+"""
+Function for q1
+
+Args:
+    u: Initial conditions
+    p: Params
+    t: current_time
+
+Returns:
+    Vector(dx, dy, dz)
+"""
 function q1(u, p, t)
     x, y, z = u
     a, b, c = p
@@ -7,17 +18,26 @@ function q1(u, p, t)
     return SVector(dx, dy, dz)
 end
 
+"""
+"""
 function psos1(A, index, value)
     # Estimate poincare section of traj(A) with hyperplane defined for when var(traj) with given index
     # crosses a specific value (- => +)
     # Use interpolation
-    plane = (index, value)
-    pmap = poincaresos(A, plane, 1000, direction = -1)
-    return pmap
+    prev_state = A[1]
+    crossings = []
+    for point in A
+        current_state = point
+        if prev_state[index] < value && current_state[index] > value
+            push!(crossings, current_state)
+        end
+        prev_state = current_state
+    end
+    return crossings
 end
 
 """
-Function to calculate the crossing times of a trajectory over a hyperplane using the poincare poincare_map
+Function to calculate the crossing times of a trajectory over a hyperplane using the poincare map and interpolation
 
 Args:
     A: ODE
@@ -29,21 +49,21 @@ Returns:
     Vector(float): Crossing times up to (strictly less than) maximum(tvec)
 """
 function psos2(A, tvec, index, value)
-    max_time = maximum(tvec)
-    times = []
-    plane = (index, value)
-    pmap = poincaremap(A, plane, max_time, direction = -1)
-    while true
-        step!(pmap)
-        t_cross = current_crossing_time(pmap)
-        if t_cross < max_time
-            push!(times, t_cross)
-        else
-            return times
+    prev_state = A[1]
+    crossing_times = []
+    for (i, point) in enumerate(A)
+        current_state = point
+        if prev_state[index] < value && current_state[index] > value
+            current_time = tvec[i]
+            push!(crossing_times, current_time)
         end
+        prev_state = current_state
     end
+    return crossing_times
 end
 
+"""
+"""
 function NP_DS(u, p, t)
     N, P = u
     r, δ = p
@@ -79,6 +99,8 @@ function simple_grouping(features, r)
     return group_indeces
 end
 
+"""
+"""
 function fg1(ds, featuriser, r, ics; Ttr, Dt, T)
     features = []
     for u0 in ics
@@ -90,6 +112,8 @@ function fg1(ds, featuriser, r, ics; Ttr, Dt, T)
     return groups
 end
 
+"""
+"""
 function fg2(ds, featuriser, r, ics; Ttr, Dt, T)
     features = []
     for point in ics
@@ -115,6 +139,8 @@ function fg2(ds, featuriser, r, ics; Ttr, Dt, T)
     return (groups, group_init_traj, boa_fractions)
 end
 
+"""
+"""
 function duffing_oscillator(u, p, t)
     x, v = u
     δ, f, ω = p
