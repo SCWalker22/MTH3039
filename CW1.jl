@@ -197,3 +197,54 @@ function generate_metric(Nweight, Pweight)
     end
 return metric
 end
+
+"""
+"""
+function calculate_mcs(u_ref, u_group, points, groups, mymetric)
+    min_dist = Inf
+    v_min = nothing
+    for (i, v) in enumerate(points)
+        if groups[i] == u_group
+            continue
+        end
+
+        dist = mymetric(u_ref, v)
+
+        if dist < min_dist
+            min_dist = dist
+            v_min = v
+        end
+    end
+    return SVector(v_min, min_dist)
+end
+
+"""
+"""
+function naive_phases(X::StateSpaceSet, scaling)
+center = mean(X)
+xs = X[:, 1] .- center[1]
+ys = X[:, 2] .- center[2]
+return atan.(scaling .* ys, xs)
+end
+
+function random_r_sim(ds, m, n, metric)
+    matched_cond = 0
+    for j in m
+        set_state!(ds, [5, 0.01])
+        set_parameter!(ds, 1, 1.6)
+        randomtime() = 13*(2 + rand())
+        X, t = trajectory(ds, randomtime)
+        for i in n
+            set_parameter!(ds, 1, 2.55)
+            set_state!(ds, X[end])
+            X, t = trajectory(ds, randomtime)
+            set_parameter!(ds, 1, 1.6)
+            set_state!(ds, X[end])
+            X, t = trajectory(ds, randomtime)
+        end
+        if metric([0, 0], X[end]) < 1e-6
+            matched_cond += 1
+        end
+    end
+    return matched_cond/m
+end
