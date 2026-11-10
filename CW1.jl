@@ -19,11 +19,17 @@ function q1(u, p, t)
 end
 
 """
+Poincare function 1
+
+Args:
+    A: trajectory
+    index: Variable index of plane
+    value: Value of plane
+
+Returns:
+    Crossings: Crossings of trajectory through plane
 """
 function psos1(A, index, value)
-    # Estimate poincare section of traj(A) with hyperplane defined for when var(traj) with given index
-    # crosses a specific value (- => +)
-    # Use interpolation
     prev_state = A[1]
     crossings = []
     for point in A
@@ -63,6 +69,15 @@ function psos2(A, tvec, index, value)
 end
 
 """
+DynamicalSystem for NP (Predator prey)
+
+Args:
+    u: Initial conditions
+    p: Params
+    t: time
+
+Returns:
+    SVector(dn, dp)
 """
 function NP_DS(u, p, t)
     N, P = u
@@ -77,6 +92,16 @@ function NP_DS(u, p, t)
     return SVector(dN, dP)
 end
 
+"""
+Simple grouping algorithm using distance from group centres
+
+Args:
+    features: features of points
+    r: radius
+
+Returns:
+    group: Numbers of groups ordered by input
+"""
 function simple_grouping(features, r)
     groups = [features[1]]
     group_indeces = [1]
@@ -100,6 +125,35 @@ function simple_grouping(features, r)
 end
 
 """
+Featuriser for 2.3
+
+Args:
+    X: Vector of points
+
+Returns:
+    SVector(mean_N, sd_p): Features for this ds
+"""
+function featuriser(X)
+    N, p = columns(X)
+    mean_N = mean(N)
+    sd_p = std(p)
+    return SVector(mean_N, sd_p)
+end
+
+"""
+1st Grouping fn
+
+Args:
+    ds: DynamicalSystem
+    featuriser: featuriser to use
+    r: radius
+    ics: Initial conditions
+    Ttr: Transient time
+    Dt: Time step
+    T: Total time
+
+Returns:
+    groups: Grouping of point
 """
 function fg1(ds, featuriser, r, ics; Ttr, Dt, T)
     features = []
@@ -113,6 +167,21 @@ function fg1(ds, featuriser, r, ics; Ttr, Dt, T)
 end
 
 """
+2nd Grouping fn
+
+Args:
+    ds: DynamicalSystem
+    featuriser: featuriser to use
+    r: radius
+    ics: Initial conditions
+    Ttr: Transient time
+    Dt: Time step
+    T: Total time
+
+Returns:
+    groups: Grouping of point
+    group_init_traj: Trajectory of point of basis of group
+    boa_fractions: Fraction of point on each basin
 """
 function fg2(ds, featuriser, r, ics; Ttr, Dt, T)
     features = []
@@ -140,6 +209,15 @@ function fg2(ds, featuriser, r, ics; Ttr, Dt, T)
 end
 
 """
+Duffing Oscillator Definer
+
+Args:
+    u: Initial conditions
+    p: Params
+    t: time
+
+Returns:
+    SVector(dn, dp, t)
 """
 function duffing_oscillator(u, p, t)
     x, v = u
@@ -150,6 +228,7 @@ function duffing_oscillator(u, p, t)
 end
 
 """
+Given pp_bmap fn
 """
 function pp_bmap(ds::DynamicalSystem, ics)
     pow = 4
@@ -165,6 +244,7 @@ function pp_bmap(ds::DynamicalSystem, ics)
 end
 
 """
+Dist function
 """
 function d(X_1, X_2)
     centroid_1 = mean(X_1)
@@ -173,13 +253,14 @@ function d(X_1, X_2)
     return dist
 end
 
-"""
-"""
-function global_continuation()
-    pass
-end
+# """
+# """
+# function global_continuation()
+#     pass
+# end
 
 """
+Given featuriser
 """
 function provided_featurizer(X)
     x = X[:, 1]
@@ -190,6 +271,7 @@ function provided_featurizer(X)
 end
 
 """
+Given Metric fn
 """
 function generate_metric(Nweight, Pweight)
     function metric(u, v)
@@ -199,6 +281,17 @@ return metric
 end
 
 """
+Calculate the mcs of a point using a group of points
+
+Args:
+    u_ref: Point to calculate mcs of
+    u_group: group of u_ref
+    points: Group of points to compare against
+    groups: Groups of all points
+    mymetric: Metric
+
+Returns:
+    SVector(v_min, min_dist): Closest point, and the Euclidean Dist
 """
 function calculate_mcs(u_ref, u_group, points, groups, mymetric)
     min_dist = Inf
@@ -219,6 +312,7 @@ function calculate_mcs(u_ref, u_group, points, groups, mymetric)
 end
 
 """
+Naive Phases - given
 """
 function naive_phases(X::StateSpaceSet, scaling)
 center = mean(X)
@@ -227,20 +321,37 @@ ys = X[:, 2] .- center[2]
 return atan.(scaling .* ys, xs)
 end
 
+
+"""
+Random fn - given
+"""
+randomtime() = 13*(2 + rand())
+
+"""
+Monte-Carlo Simulation
+
+Args:
+    ds: DynamicalSystem
+    m: Number of loops:
+    n: Number of trials per loop
+    metric: Metric
+
+Returns:
+    proportion: proportion of points matching cond
+"""
 function random_r_sim(ds, m, n, metric)
     matched_cond = 0
-    for j in m
+    for j in 1:m
         set_state!(ds, [5, 0.01])
         set_parameter!(ds, 1, 1.6)
-        randomtime() = 13*(2 + rand())
-        X, t = trajectory(ds, randomtime)
-        for i in n
+        X, t = trajectory(ds, randomtime())
+        for i in 1:n
             set_parameter!(ds, 1, 2.55)
             set_state!(ds, X[end])
-            X, t = trajectory(ds, randomtime)
+            X, t = trajectory(ds, randomtime())
             set_parameter!(ds, 1, 1.6)
             set_state!(ds, X[end])
-            X, t = trajectory(ds, randomtime)
+            X, t = trajectory(ds, randomtime())
         end
         if metric([0, 0], X[end]) < 1e-6
             matched_cond += 1
